@@ -1,4 +1,7 @@
 # Copyright (c) 2014 hellofwy
+# 
+# Modify by Bricdaii
+# Depends on Firewall-cmd
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -48,51 +51,106 @@ SS_IN_RULES=ssinput
 SS_OUT_RULES=ssoutput
 
 del_ipt_chains () {
-    iptables -F $SS_IN_RULES
-    iptables -F $SS_OUT_RULES
-    iptables -D INPUT -j $SS_IN_RULES
-    iptables -D OUTPUT -j $SS_OUT_RULES
-    iptables -X $SS_IN_RULES
-    iptables -X $SS_OUT_RULES
+    # 删除 INPUT 链
+    firewall-cmd --direct --remove-rules ipv4 filter $SS_IN_RULES
+    firewall-cmd --direct --remove-rule ipv4 filter INPUT 0 -j $SS_IN_RULES
+    firewall-cmd --direct --remove-chain ipv4 filter $SS_IN_RULES
+
+    # 删除 OUTPUT 链
+    firewall-cmd --direct --remove-rules ipv4 filter $SS_OUT_RULES
+    firewall-cmd --direct --remove-rule ipv4 filter OUTPUT 0 -j $SS_OUT_RULES
+    firewall-cmd --direct --remove-chain ipv4 filter $SS_OUT_RULES
+
+    # iptables -F $SS_IN_RULES
+    # iptables -F $SS_OUT_RULES
+    # iptables -D INPUT -j $SS_IN_RULES
+    # iptables -D OUTPUT -j $SS_OUT_RULES
+    # iptables -X $SS_IN_RULES
+    # iptables -X $SS_OUT_RULES
 }
 init_ipt_chains () {
     del_ipt_chains 2> /dev/null
-    iptables -N $SS_IN_RULES
-    iptables -N $SS_OUT_RULES
-    iptables -A INPUT -j $SS_IN_RULES
-    iptables -A OUTPUT -j $SS_OUT_RULES
+
+    # 初始化 INPUT 链
+    firewall-cmd --direct --add-chain ipv4 filter $SS_IN_RULES
+    firewall-cmd --direct --add-rule ipv4 filter INPUT 0 -j $SS_IN_RULES
+    
+    # 初始化 INPUT 链
+    firewall-cmd --direct --add-chain ipv4 filter $SS_OUT_RULES
+    firewall-cmd --direct --add-rule ipv4 filter OUTPUT 0 -j $SS_OUT_RULES
+    
+    # iptables -N $SS_IN_RULES
+    # iptables -N $SS_OUT_RULES
+    # iptables -A INPUT -j $SS_IN_RULES
+    # iptables -A OUTPUT -j $SS_OUT_RULES
 }
 
 add_rules () {
     PORT=$1;
-    iptables -A $SS_IN_RULES -p tcp --dport $PORT -j ACCEPT
-    iptables -A $SS_OUT_RULES -p tcp --sport $PORT -j ACCEPT
-    iptables -A $SS_IN_RULES -p udp --dport $PORT -j ACCEPT
-    iptables -A $SS_OUT_RULES -p udp --sport $PORT -j ACCEPT
+
+    # 增加 INPUT 规则
+    firewall-cmd --direct --add-rule ipv4 filter $SS_IN_RULES 0 -p tcp --dport $PORT -j ACCEPT
+    firewall-cmd --direct --add-rule ipv4 filter $SS_IN_RULES 0 -p udp --dport $PORT -j ACCEPT
+    
+    # 增加 OUTPUT 规则
+    firewall-cmd --direct --add-rule ipv4 filter $SS_OUT_RULES 0 -p tcp --sport $PORT -j ACCEPT
+    firewall-cmd --direct --add-rule ipv4 filter $SS_OUT_RULES 0 -p udp --sport $PORT -j ACCEPT
+    
+    # iptables -A $SS_IN_RULES -p tcp --dport $PORT -j ACCEPT
+    # iptables -A $SS_OUT_RULES -p tcp --sport $PORT -j ACCEPT
+    # iptables -A $SS_IN_RULES -p udp --dport $PORT -j ACCEPT
+    # iptables -A $SS_OUT_RULES -p udp --sport $PORT -j ACCEPT
 }
 
 add_reject_rules () {
     PORT=$1;
-    iptables -A $SS_IN_RULES -p tcp --dport $PORT -j REJECT
-    iptables -A $SS_OUT_RULES -p tcp --sport $PORT -j REJECT
-    iptables -A $SS_IN_RULES -p udp --dport $PORT -j REJECT
-    iptables -A $SS_OUT_RULES -p udp --sport $PORT -j REJECT
+
+    # 增加 INPUT 规则
+    firewall-cmd --direct --add-rule ipv4 filter $SS_IN_RULES 0 -p tcp --dport $PORT -j REJECT
+    firewall-cmd --direct --add-rule ipv4 filter $SS_IN_RULES 0 -p udp --dport $PORT -j REJECT
+    
+    # 增加 OUTPUT 规则
+    firewall-cmd --direct --add-rule ipv4 filter $SS_OUT_RULES 0 -p tcp --sport $PORT -j REJECT
+    firewall-cmd --direct --add-rule ipv4 filter $SS_OUT_RULES 0 -p udp --sport $PORT -j REJECT
+
+    # iptables -A $SS_IN_RULES -p tcp --dport $PORT -j REJECT
+    # iptables -A $SS_OUT_RULES -p tcp --sport $PORT -j REJECT
+    # iptables -A $SS_IN_RULES -p udp --dport $PORT -j REJECT
+    # iptables -A $SS_OUT_RULES -p udp --sport $PORT -j REJECT
 }
 
 del_rules () {
     PORT=$1;
-    iptables -D $SS_IN_RULES -p tcp --dport $PORT -j ACCEPT
-    iptables -D $SS_OUT_RULES -p tcp --sport $PORT -j ACCEPT
-    iptables -D $SS_IN_RULES -p udp --dport $PORT -j ACCEPT
-    iptables -D $SS_OUT_RULES -p udp --sport $PORT -j ACCEPT
+
+    # 删除 INPUT 规则
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_IN_RULES 0 -p tcp --dport $PORT -j ACCEPT
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_IN_RULES 0 -p udp --dport $PORT -j ACCEPT
+
+    # 删除 OUTPUT 规则
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_OUT_RULES 0 -p tcp --sport $PORT -j ACCEPT
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_OUT_RULES 0 -p udp --sport $PORT -j ACCEPT
+    
+    # iptables -D $SS_IN_RULES -p tcp --dport $PORT -j ACCEPT
+    # iptables -D $SS_OUT_RULES -p tcp --sport $PORT -j ACCEPT
+    # iptables -D $SS_IN_RULES -p udp --dport $PORT -j ACCEPT
+    # iptables -D $SS_OUT_RULES -p udp --sport $PORT -j ACCEPT
 }
 
 del_reject_rules () {
     PORT=$1;
-    iptables -D $SS_IN_RULES -p tcp --dport $PORT -j REJECT
-    iptables -D $SS_OUT_RULES -p tcp --sport $PORT -j REJECT
-    iptables -D $SS_IN_RULES -p udp --dport $PORT -j REJECT
-    iptables -D $SS_OUT_RULES -p udp --sport $PORT -j REJECT
+
+    # 删除 INPUT 规则
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_IN_RULES 0 -p tcp --dport $PORT -j REJECT
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_IN_RULES 0 -p udp --dport $PORT -j REJECT
+
+    # 删除 OUTPUT 规则
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_OUT_RULES 0 -p tcp --sport $PORT -j REJECT
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_OUT_RULES 0 -p udp --sport $PORT -j REJECT
+    
+    # iptables -D $SS_IN_RULES -p tcp --dport $PORT -j REJECT
+    # iptables -D $SS_OUT_RULES -p tcp --sport $PORT -j REJECT
+    # iptables -D $SS_IN_RULES -p udp --dport $PORT -j REJECT
+    # iptables -D $SS_OUT_RULES -p udp --sport $PORT -j REJECT
 }
 
 list_rules () {
@@ -280,8 +338,8 @@ check_traffic_against_limits () {
     done
 }
 get_traffic_from_iptables () {
-        echo "$(iptables -nvx -L $SS_OUT_RULES)" |
-        sed -nr 's/[sd]pt:([0-9]{1,5})/\1/p' |
+        echo "$(iptables -nvx -L $SS_IN_RULES)" "$(iptables -nvx -L $SS_OUT_RULES)" |
+        sed -nr '/ [sd]pt:[0-9]{1,5}$/ s/[sd]pt:([0-9]{1,5})/\1/p' |
         awk '
         {
            trans=$2;

@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # Copyright (c) 2014 hellofwy
+# 
+# Modify by Bricdaii
+# Depends on Firewall-cmd
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +35,9 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 usage () {
     cat $DIR/sshelp
+}
+usage_ext () {
+    cat $DIR/sshelp-ext
 }
 wrong_para_prompt() {
     echo "参数输入错误!"
@@ -68,11 +74,13 @@ create_json () {
 
 }
 
+# 运行 python-ss
 run_ssserver () {
     $SSSERVER -qq -c $JSON_FILE 2>/dev/null >/dev/null &
     echo $! > $SSSERVER_PID 
 }
 
+# 检查 python-ss 是否运行
 check_ssserver () {
     if [ -e $SSSERVER_PID ]; then
         ps $(cat $SSSERVER_PID) 2>/dev/null | grep $SSSERVER_NAME 2>/dev/null
@@ -92,20 +100,21 @@ check_sscounter () {
 }
 
 start_ss () {
-    if [ ! -e $USER_FILE ]; then
-        echo "还没有用户，请先添加一个用户"
-        return 1
-    fi
-    if [ -e $SSSERVER_PID ]; then
-        if check_ssserver; then
-            echo 'ss服务已启动，同一实例不能启动多次！'
-            return 1
-        else
-            rm $SSSERVER_PID
-        fi
-    fi
-    create_json
+    # if [ ! -e $USER_FILE ]; then
+    #     echo "还没有用户，请先添加一个用户"
+    #     return 1
+    # fi
+    # if [ -e $SSSERVER_PID ]; then
+    #     if check_ssserver; then
+    #         echo 'ss服务已启动，同一实例不能启动多次！'
+    #         return 1
+    #     else
+    #         rm $SSSERVER_PID
+    #     fi
+    # fi
+    # create_json
 
+    # 检查 sscounter.sh 的是否启动
     if [ -e $SSCOUNTER_PID ]; then
         if check_sscounter ; then 
             kill `cat $SSCOUNTER_PID`
@@ -114,6 +123,7 @@ start_ss () {
         fi
     fi
 
+    # 启动 sscounter.sh
     echo 'sscounter.sh启动中...'
     ( $DIR/sscounter.sh ) & 
     echo $! > $SSCOUNTER_PID
@@ -124,26 +134,31 @@ start_ss () {
         return 1
     fi
 
-    echo 'ssserver启动中...'
-    run_ssserver 
-    sleep 1
-    if check_ssserver; then 
-        echo 'ssserver已启动'
-    else
-        echo 'ssserver启动失败'
-        return 1
-    fi
+    # # 启动 python-ss
+    # echo 'ssserver启动中...'
+    # run_ssserver 
+    # sleep 1
+    # if check_ssserver; then 
+    #     echo 'ssserver已启动'
+    # else
+    #     echo 'ssserver启动失败'
+    #     return 1
+    # fi
 }
 
 stop_ss () {
-    if check_ssserver; then 
-        kill `cat $SSSERVER_PID`
-        rm $SSSERVER_PID 
-        del_ipt_chains 2> /dev/null
-        echo 'ssserver已关闭'
-    else
-        echo 'ssserver未启动'
-    fi
+
+    # # 停止 python-ss
+    # if check_ssserver; then 
+    #     kill `cat $SSSERVER_PID`
+    #     rm $SSSERVER_PID 
+    #     del_ipt_chains 2> /dev/null
+    #     echo 'ssserver已关闭'
+    # else
+    #     echo 'ssserver未启动'
+    # fi
+
+    # 停止 ssconter.sh
     if check_sscounter; then 
         kill `cat $SSCOUNTER_PID`
         rm $SSCOUNTER_PID
@@ -157,27 +172,30 @@ restart_ss () {
     stop_ss
     start_ss
 }
-    
+
 soft_restart_ss () {
     if check_ssserver; then 
-        kill -s SIGQUIT `cat $SSSERVER_PID`
-        echo 'ssserver已关闭'
+        # kill -s SIGQUIT `cat $SSSERVER_PID`
+        # echo 'ssserver已关闭'
         kill `cat $SSCOUNTER_PID`
         echo 'sscounter.sh已关闭'
         rm $SSSERVER_PID $SSCOUNTER_PID
         del_ipt_chains 2> /dev/null
         start_ss
     else
-        echo 'ssserver未启动'
+        echo 'ss-bash未启动'
     fi
 }
 
 status_ss () {
-    if check_ssserver; then 
-        echo 'ssserver正在运行'
-    else
-        echo 'ssserver未启动'
-    fi
+    # # 检查 python-ss 是否启动
+    # if check_ssserver; then 
+    #     echo 'ssserver正在运行'
+    # else
+    #     echo 'ssserver未启动'
+    # fi
+
+    # 检查 counter 是否启动
     if check_sscounter; then 
         echo 'sscounter.sh正在运行'
     else
@@ -236,13 +254,17 @@ $PORT $PWORD $TLIMIT" >> $USER_FILE;
         echo "用户已存在!"
         return 1
     fi
-# 重新生成配置文件，并加载
-    if [ -e $SSSERVER_PID ]; then
-        create_json
-        kill -s SIGQUIT `cat $SSSERVER_PID`
-        add_rules $PORT
-        run_ssserver
-    fi
+
+# # 重新生成配置文件，并加载
+#     if [ -e $SSSERVER_PID ]; then
+#         create_json
+#         kill -s SIGQUIT `cat $SSSERVER_PID`
+#         add_rules $PORT
+#         run_ssserver
+#     fi
+
+# 新增防火墙规则
+    add_rules $PORT
 # 更新流量记录文件
     update_or_create_traffic_file_from_users
     calc_remaining
@@ -263,14 +285,19 @@ del_user () {
     if [ -e $USER_FILE ]; then
         sed -i '/^\s*'$PORT'\s/ d' $USER_FILE
     fi
-# 重新生成配置文件，并加载
-    if [ -e $SSSERVER_PID ]; then
-        create_json
-        kill -s SIGQUIT `cat $SSSERVER_PID`
-        del_rules $PORT 2>/dev/null
-        del_reject_rules $PORT 2>/dev/null
-        run_ssserver
-    fi
+
+# # 重新生成配置文件，并加载
+#     if [ -e $SSSERVER_PID ]; then
+#         create_json
+#         kill -s SIGQUIT `cat $SSSERVER_PID`
+#         del_rules $PORT 2>/dev/null
+#         del_reject_rules $PORT 2>/dev/null
+#         run_ssserver
+#     fi
+
+# 删除防火墙规则
+    del_rules $PORT 2>/dev/null
+    del_reject_rules $PORT 2>/dev/null
 # 更新流量记录文件
     update_or_create_traffic_file_from_users
     calc_remaining
@@ -306,13 +333,17 @@ change_user () {
             }
         }' > $USER_FILE.tmp;
         mv $USER_FILE.tmp $USER_FILE
-        # 重新生成配置文件，并加载
-        if [ -e $SSSERVER_PID ]; then
-            create_json
-            kill -s SIGQUIT `cat $SSSERVER_PID`
-            add_rules $PORT
-            run_ssserver
-        fi
+
+        # # 重新生成配置文件，并加载
+        # if [ -e $SSSERVER_PID ]; then
+        #     create_json
+        #     kill -s SIGQUIT `cat $SSSERVER_PID`
+        #     add_rules $PORT
+        #     run_ssserver
+        # fi
+
+        # 新增防火墙规则
+        add_rules $PORT
         # 更新流量记录文件
         update_or_create_traffic_file_from_users
         calc_remaining
@@ -350,13 +381,17 @@ change_passwd () {
             }
         }' > $USER_FILE.tmp;
         mv $USER_FILE.tmp $USER_FILE
-        # 重新生成配置文件，并加载
-        if [ -e $SSSERVER_PID ]; then
-            create_json
-            kill -s SIGQUIT `cat $SSSERVER_PID`
-            add_rules $PORT
-            run_ssserver
-        fi
+
+        # # 重新生成配置文件，并加载
+        # if [ -e $SSSERVER_PID ]; then
+        #     create_json
+        #     kill -s SIGQUIT `cat $SSSERVER_PID`
+        #     add_rules $PORT
+        #     run_ssserver
+        # fi
+
+        # 新增用户规则
+        add_rules $PORT
         # 更新流量记录文件
         update_or_create_traffic_file_from_users
         calc_remaining
@@ -603,12 +638,14 @@ if [ "$EUID" -ne 0 ]; then
     echo "必需以root身份运行，请使用sudo等命令"
     exit 1;
 fi
-if type $SSSERVER 2>&1 >/dev/null; then
-    :
-else
-    echo "无法找到ssserver程序，请在sslib.sh中指定其路径"
-    exit 1;
-fi
+
+# if type $SSSERVER 2>&1 >/dev/null; then
+#     :
+# else
+#     echo "无法找到ssserver程序，请在sslib.sh中指定其路径"
+#     exit 1;
+# fi
+
 case $1 in
     add )
         shift
@@ -686,8 +723,10 @@ case $1 in
     lrules )
         list_rules
         ;;
+    help )
+        usage_ext
+        ;;
     * )
         usage
         ;;
 esac
-
