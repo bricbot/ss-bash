@@ -37,8 +37,9 @@ usage () {
     cat $DIR/sshelp
 }
 usage_ext () {
-    cat $DIR/sshelp-ext
+    cat $DIR/sshelpe
 }
+
 wrong_para_prompt() {
     echo "参数输入错误!"
     echo "查看帮助：ssadmin.sh -h"
@@ -626,7 +627,7 @@ if [ "$#" -eq 0 ]; then
 fi
 case $1 in
     -h|h|help )
-        usage
+        usage_ext
         exit 0;
         ;;
     -v|v|version )
