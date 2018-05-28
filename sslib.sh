@@ -22,7 +22,9 @@
 # SOFTWARE.
 
 # 流量采样间隔,单位为秒
-INTERVEL=300
+INTERVEL=180
+# 并发限制 (32~>15, 13~>4)
+CONCURRENCE=45
 # 指定Shadowsocks程序文件
 SSSERVER=ssserver
 
@@ -92,6 +94,10 @@ add_rules () {
     firewall-cmd --direct --add-rule ipv4 filter $SS_IN_RULES 0 -p tcp --dport $PORT -j ACCEPT
     firewall-cmd --direct --add-rule ipv4 filter $SS_IN_RULES 0 -p udp --dport $PORT -j ACCEPT
     
+    #TODO: 增加 INPUT 并发限制 和 并发超限记录
+    firewall-cmd --direct --add-rule ipv4 filter $SS_IN_RULES 0 -p tcp --syn --dport $PORT -m connlimit --connlimit-above $CONCURRENCE --connlimit-mask 0 -j LOG
+    firewall-cmd --direct --add-rule ipv4 filter $SS_IN_RULES 0 -p tcp --syn --dport $PORT -m connlimit --connlimit-above $CONCURRENCE --connlimit-mask 0 -j REJECT --reject-with tcp-reset
+
     # 增加 OUTPUT 规则
     firewall-cmd --direct --add-rule ipv4 filter $SS_OUT_RULES 0 -p tcp --sport $PORT -j ACCEPT
     firewall-cmd --direct --add-rule ipv4 filter $SS_OUT_RULES 0 -p udp --sport $PORT -j ACCEPT
@@ -125,6 +131,10 @@ del_rules () {
     # 删除 INPUT 规则
     firewall-cmd --direct --remove-rule ipv4 filter $SS_IN_RULES 0 -p tcp --dport $PORT -j ACCEPT
     firewall-cmd --direct --remove-rule ipv4 filter $SS_IN_RULES 0 -p udp --dport $PORT -j ACCEPT
+
+    #TODO: 删除 INPUT 并发限制 和 并发超限记录
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_IN_RULES 0 -p tcp --syn --dport $PORT -m connlimit --connlimit-above $CONCURRENCE --connlimit-mask 0 -j LOG
+    firewall-cmd --direct --remove-rule ipv4 filter $SS_IN_RULES 0 -p tcp --syn --dport $PORT -m connlimit --connlimit-above $CONCURRENCE --connlimit-mask 0 -j REJECT --reject-with tcp-reset
 
     # 删除 OUTPUT 规则
     firewall-cmd --direct --remove-rule ipv4 filter $SS_OUT_RULES 0 -p tcp --sport $PORT -j ACCEPT
